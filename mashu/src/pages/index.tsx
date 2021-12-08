@@ -63,7 +63,7 @@ export default function Index() {
               className="bg-green rounded-md px-4 py-2 text-dark-secondary"
               onClick={createRoom}
             >
-              buat room
+              create room
             </button>
           </div>
         </div>

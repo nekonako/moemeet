@@ -33,9 +33,10 @@ export default function Room() {
             localStream.current.srcObject = clientRoom.localStream; 
             let timeout = 0;
             const interval = setInterval(() => {
-              if (clientRoom.remoteStream) {
-                console.log(clientRoom.remoteStream);
+              if (clientRoom.remoteStream && !remoteStream.current.srcObject) {
+                console.log(clientRoom.remoteStream.getTracks);
                 remoteStream.current.srcObject = clientRoom.remoteStream;
+                console.log("remote stream", remoteStream.current)
                 clearInterval(interval);
               }
               timeout += 1;
@@ -69,7 +70,7 @@ export default function Room() {
             remote video
           </div>
           <div className="p-4 bg-dark-secondary rounded-lg text-center w-full">
-            <video className="rounded-lg" width="500" autoPlay ref={remoteStream} />
+            <video autoPlay={true} width="500"  ref={remoteStream} />
           </div>
         </div>
         <div className="ml-4">
@@ -77,7 +78,7 @@ export default function Room() {
             Local Video
           </div>
           <div className="p-4 bg-dark-secondary rounded-lg flex text-center w-full">
-            <video className="rounded-lg" width="500" autoPlay ref={localStream} />
+            <video className="rounded-lg" width="500" autoPlay={true} ref={localStream} />
           </div>
           <div className="bg-dark-secondary p-4">
             {!mute && (
