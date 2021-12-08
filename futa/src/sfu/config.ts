@@ -26,6 +26,7 @@ export const config = {
   sslKey: 'ssl/key.pem',
   mediasoup: {
     // Worker settings
+    totalWorker : os.cpus().length,
     worker: {
       rtcMinPort: 10000,
       rtcMaxPort: 10100,

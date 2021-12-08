@@ -1,4 +1,4 @@
-import { Worker, Consumer /*Producer*/ } from 'mediasoup/node/lib/types';
+import { Worker, Consumer } from 'mediasoup/node/lib/types';
 import * as mediasoup from 'mediasoup';
 import fs from 'fs';
 import https from 'https';
@@ -8,7 +8,7 @@ import { config } from './sfu/config';
 import Room from './sfu/room';
 import Peer from './sfu/peer';
 
-let worker: Worker;
+let workers: Array<Worker> = [];
 let webserver: https.Server;
 let socketServer: socketIO.Server;
 let consumer: Consumer;
@@ -65,7 +65,7 @@ async function runSocketServer() {
         cb('already exist');
       } else {
         console.log('Created room', { room_id: room_id });
-        roomList.set(room_id, new Room(room_id, 'cok', worker, socketServer));
+        roomList.set(room_id, new Room(room_id, 'cok', getMediasoupWorker(), socketServer));
         cb(room_id);
       }
     });
@@ -185,9 +185,7 @@ async function runSocketServer() {
 
     socket.on('disconnect', () => {
       console.log('Disconnect', {
-        name: `${
-          roomList.get(socket['room_id']) 
-        }`,
+        name: `${roomList.get(socket['room_id'])}`,
       });
 
       if (!socket['room_id']) return;
@@ -198,21 +196,35 @@ async function runSocketServer() {
 
 async function runMediasoupWorker() {
   try {
-    worker = await mediasoup.createWorker({
-      logLevel: config.mediasoup.worker.logLevel,
-      logTags: config.mediasoup.worker.logTags,
-      rtcMinPort: config.mediasoup.worker.rtcMinPort,
-      rtcMaxPort: config.mediasoup.worker.rtcMaxPort,
-    });
+    const { totalWorker } = config.mediasoup;
+    for (let i = 0; i < totalWorker; i++) {
+      const worker = await mediasoup.createWorker({
+        logLevel: config.mediasoup.worker.logLevel,
+        logTags: config.mediasoup.worker.logTags,
+        rtcMinPort: config.mediasoup.worker.rtcMinPort,
+        rtcMaxPort: config.mediasoup.worker.rtcMaxPort,
+      });
+      worker.on('died', () => {
+        console.error(
+          'mediasoup worker died, exiting in 2 seconds.... [pid:%d]',
+          worker.pid
+        );
+        setTimeout(() => process.exit(1), 2000);
+      });
 
-    worker.on('died', () => {
-      console.error(
-        'mediasoup worker died, exiting in 2 seconds.... [pid:%d]',
-        worker.pid
-      );
-      setTimeout(() => process.exit(1), 2000);
-    });
+      workers.push(worker)
+
+    }
   } catch (err) {
     console.log('error create worker', err);
   }
+}
+
+let nextMediasoupWorkerIdx = 0
+function getMediasoupWorker() {
+  const worker = workers[nextMediasoupWorkerIdx]
+
+  if (++nextMediasoupWorkerIdx === workers.length) nextMediasoupWorkerIdx = 0
+
+  return worker
 }
